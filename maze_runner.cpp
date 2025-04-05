@@ -4,6 +4,7 @@
 #include <stack>
 #include <thread>
 #include <chrono>
+#include <random>
 
 // Representação do labirinto
 using Maze = std::vector<std::vector<char>>;
@@ -21,6 +22,7 @@ int num_rows;
 int num_cols;
 std::stack<Position> valid_positions;
 std::vector<std::vector<bool>> visitado;
+volatile bool achou = false;
 
 // Função para carregar o labirinto de um arquivo
 Position load_maze(const std::string& file_name) {
@@ -75,6 +77,7 @@ void print_maze() {
         }
         std::cout << '\n';
     }
+    std::cout << '\n';
 }
 
 
@@ -113,17 +116,31 @@ bool walk(Position pos) {
     //    b. Chame walk recursivamente para esta posição
     //    c. Se walk retornar true, propague o retorno (retorne true)
     // 7. Se todas as posições foram exploradas sem encontrar a saída, retorne false
-    if (maze[pos.row][pos.col] == 's')
+    if (achou)
     {
         return true;
     }
 
+    if (maze[pos.row][pos.col] == 's')
+    {
+        achou = true;
+        return true;
+    }
+
     maze[pos.row][pos.col] = 'o';
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dist(1, 50);
+    int delay = dist(gen);
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+
     print_maze();
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     maze[pos.row][pos.col] = '.';
 
-    Position direções[] = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+    Position direções[] = {{0, -1}, {-1, 0}, {1, 0}, {0, 1}};
 
     for(auto& dir : direções)
     {
@@ -137,14 +154,22 @@ bool walk(Position pos) {
         }
     }
 
-    if (!valid_positions.empty())
+    std::vector<std::thread> threads;
+
+    while (!valid_positions.empty())
     {
         Position next = valid_positions.top();
         valid_positions.pop();
-        if (walk(next)) return true;
-
+        threads.emplace_back([next]() {
+            walk(next); 
+        });      
+        
     }
-    return false;
+    for (auto& th : threads)
+    {
+        th.join();
+    }
+    return achou;
     }
 
 
