@@ -129,6 +129,7 @@ bool walk(Position pos) {
 
     maze[pos.row][pos.col] = 'o';
 
+    //    Parte do código para melhorar a impressão frnética dos labirintos pela threads
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> dist(1, 50);
